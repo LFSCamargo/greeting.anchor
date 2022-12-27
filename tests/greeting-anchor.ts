@@ -1,5 +1,6 @@
 import * as anchor from "@project-serum/anchor";
-import { Program } from "@project-serum/anchor";
+import { AccountNamespace, Program } from "@project-serum/anchor";
+import { assert } from "chai";
 import { GreetingAnchor, IDL } from "../target/types/greeting_anchor";
 
 describe("greeting-anchor", () => {
@@ -12,16 +13,22 @@ describe("greeting-anchor", () => {
   it("should execute the function call without any issues", async () => {
     const greetingAccount = anchor.web3.Keypair.generate();
 
-    const tx = await program.rpc.setMessage("Hello World", {
-      accounts: {
-        greeting: greetingAccount.publicKey,
+    await program.methods
+      .setMessage("Hello World")
+      .accounts({
+        greetingAccount: greetingAccount.publicKey,
         user: provider.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
-      },
-      options: {
+      })
+      .signers([greetingAccount])
+      .rpc({
         commitment: "confirmed",
-      },
-      signers: [greetingAccount],
-    });
+      });
+
+    const { greeting } = await program.account.greetingAccount.fetch(
+      greetingAccount.publicKey
+    );
+
+    assert(greeting === "Hello World", "Error Unexpected message");
   });
 });
